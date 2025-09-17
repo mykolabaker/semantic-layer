@@ -1,24 +1,6 @@
-sqlitecloud>=1.0.0
 openai>=1.0.0
 anthropic>=0.7.0
 pydantic>=2.0.0
 python-dotenv>=1.0.0
 typing-extensions>=4.0.0
-
-
-# .env.example
-
-# Database Configuration
-DATABASE_CONNECTION_STRING="sqlitecloud://cfjlnjplhz.g4.sqlite.cloud:8860/northwind.db?apikey=aafwabr3EApIYH1wB3bxR0kJddVLs5yaKESTVvZ3Geg"
-DATABASE_TIMEOUT=30
-
-# LLM Configuration
-LLM_PROVIDER=openai
-LLM_MODEL=gpt-4-turbo-preview
-OPENAI_API_KEY=your_openai_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-
-# Pipeline Settings
-CACHE_ENABLED=true
-MAX_RETRY_ATTEMPTS=3
-VALIDATION_ENABLED=true
+pytest>=8.0.0

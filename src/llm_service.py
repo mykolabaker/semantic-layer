@@ -37,17 +37,41 @@ class OpenAIProvider(LLMProvider):
 
     def generate_response(self, prompt: str, **kwargs) -> str:
         """Generate response using OpenAI API."""
+        max_tokens = kwargs.get("max_tokens", 4000)
+        temperature = kwargs.get("temperature", 0.1)
+
+        self.logger.debug(f"OpenAI request - Model: {self.model}, Max tokens: {max_tokens}, Temperature: {temperature}")
+        self.logger.debug(f"Prompt length: {len(prompt)} characters")
+
         try:
+            import time
+            start_time = time.time()
+
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=kwargs.get("max_tokens", 4000),
-                temperature=kwargs.get("temperature", 0.1),
+                max_tokens=max_tokens,
+                temperature=temperature,
             )
-            content = response.choices[0].message.content
-            return content or ""
+
+            request_time = time.time() - start_time
+            content = response.choices[0].message.content or ""
+
+            # Log response details
+            self.logger.debug(f"OpenAI response received in {request_time:.2f} seconds")
+            self.logger.debug(f"Response length: {len(content)} characters")
+
+            if hasattr(response, 'usage'):
+                usage = response.usage
+                self.logger.info(f"Token usage - Prompt: {usage.prompt_tokens}, Completion: {usage.completion_tokens}, Total: {usage.total_tokens}")
+
+            return content
+
         except Exception as e:
             self.logger.error(f"OpenAI API error: {e}")
+            self.logger.error(f"Error type: {type(e).__name__}")
+            if hasattr(e, 'response'):
+                self.logger.error(f"HTTP status: {getattr(e.response, 'status_code', 'Unknown')}")
             raise
 
 
@@ -69,16 +93,41 @@ class AnthropicProvider(LLMProvider):
 
     def generate_response(self, prompt: str, **kwargs) -> str:
         """Generate response using Anthropic API."""
+        max_tokens = kwargs.get("max_tokens", 4000)
+        temperature = kwargs.get("temperature", 0.1)
+
+        self.logger.debug(f"Anthropic request - Model: {self.model}, Max tokens: {max_tokens}, Temperature: {temperature}")
+        self.logger.debug(f"Prompt length: {len(prompt)} characters")
+
         try:
+            import time
+            start_time = time.time()
+
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=kwargs.get("max_tokens", 4000),
-                temperature=kwargs.get("temperature", 0.1),
+                max_tokens=max_tokens,
+                temperature=temperature,
                 messages=[{"role": "user", "content": prompt}],
             )
-            return response.content[0].text
+
+            request_time = time.time() - start_time
+            content = response.content[0].text
+
+            # Log response details
+            self.logger.debug(f"Anthropic response received in {request_time:.2f} seconds")
+            self.logger.debug(f"Response length: {len(content)} characters")
+
+            if hasattr(response, 'usage'):
+                usage = response.usage
+                self.logger.info(f"Token usage - Input: {usage.input_tokens}, Output: {usage.output_tokens}")
+
+            return content
+
         except Exception as e:
             self.logger.error(f"Anthropic API error: {e}")
+            self.logger.error(f"Error type: {type(e).__name__}")
+            if hasattr(e, 'response'):
+                self.logger.error(f"HTTP status: {getattr(e.response, 'status_code', 'Unknown')}")
             raise
 
 
@@ -117,41 +166,86 @@ class LLMService:
     def __init__(self, config):
         """Initialize LLM service with configuration."""
         self.config = config
+        self.logger = logging.getLogger(__name__)
+
+        self.logger.info(f"Initializing LLM service with provider: {config.provider}")
+        self.logger.debug(f"LLM model: {config.model}")
+        self.logger.debug(f"Max tokens: {config.max_tokens}")
+        self.logger.debug(f"Temperature: {config.temperature}")
+        self.logger.debug(f"Retry attempts: {config.retry_attempts}")
+        self.logger.debug(f"Cache enabled: {config.cache_enabled}")
+
         self.provider = self._create_provider()
         self.cache = ResponseCache() if config.cache_enabled else None
-        self.logger = logging.getLogger(__name__)
+
+        if self.cache:
+            self.logger.info(f"Response cache initialized at: {self.cache.cache_dir}")
+        else:
+            self.logger.info("Response cache disabled")
+
+        self.logger.info("LLM service initialization completed")
 
     def _create_provider(self) -> LLMProvider:
         """Create appropriate LLM provider based on configuration."""
+        self.logger.debug(f"Creating LLM provider for: {self.config.provider}")
+
         if self.config.provider == "openai":
+            self.logger.info("Initializing OpenAI provider")
             return OpenAIProvider(self.config.api_key, self.config.model)
         elif self.config.provider == "anthropic":
+            self.logger.info("Initializing Anthropic provider")
             return AnthropicProvider(self.config.api_key, self.config.model)
         else:
+            self.logger.error(f"Unsupported LLM provider: {self.config.provider}")
             raise ValueError(f"Unsupported LLM provider: {self.config.provider}")
 
     def _retry_with_backoff(self, func, *args, **kwargs):
         """Execute function with exponential backoff retry logic."""
+        self.logger.debug(f"Starting retry logic with {self.config.retry_attempts} max attempts")
+
         for attempt in range(self.config.retry_attempts):
             try:
-                return func(*args, **kwargs)
+                self.logger.debug(f"Executing attempt {attempt + 1}/{self.config.retry_attempts}")
+                result = func(*args, **kwargs)
+
+                if attempt > 0:
+                    self.logger.info(f"Function succeeded on attempt {attempt + 1}")
+
+                return result
+
             except Exception as e:
                 if attempt == self.config.retry_attempts - 1:
+                    self.logger.error(f"All {self.config.retry_attempts} attempts failed. Final error: {e}")
+                    self.logger.error(f"Error type: {type(e).__name__}")
                     raise e
+
                 wait_time = 2**attempt
                 self.logger.warning(
-                    f"Attempt {attempt + 1} failed, retrying in {wait_time}s: {e}"
+                    f"Attempt {attempt + 1}/{self.config.retry_attempts} failed: {e}"
                 )
+                self.logger.info(f"Retrying in {wait_time} seconds...")
                 time.sleep(wait_time)
 
     def _generate_with_cache(self, prompt: str) -> str:
         """Generate response with caching support."""
+        prompt_length = len(prompt)
+        self.logger.debug(f"Generating response for prompt of {prompt_length} characters")
+
+        cache_key = None
         if self.cache:
             cache_key = self.cache.get_cache_key(prompt, self.config.model)
+            self.logger.debug(f"Cache key: {cache_key[:16]}...")
+
             cached = self.cache.get_cached_response(cache_key)
             if cached:
                 self.logger.info("Using cached LLM response")
+                self.logger.debug(f"Cached response length: {len(cached)} characters")
                 return cached
+            else:
+                self.logger.debug("No cached response found")
+
+        self.logger.info(f"Sending request to LLM ({self.config.provider}/{self.config.model})")
+        start_time = time.time()
 
         response = self._retry_with_backoff(
             self.provider.generate_response,
@@ -160,7 +254,15 @@ class LLMService:
             temperature=self.config.temperature,
         )
 
-        if self.cache:
+        request_time = time.time() - start_time
+        response_length = len(response)
+
+        self.logger.info(f"LLM response received in {request_time:.2f} seconds")
+        self.logger.debug(f"Response length: {response_length} characters")
+        self.logger.debug(f"Response preview: {response[:200]}...")
+
+        if self.cache and cache_key:
+            self.logger.debug("Caching LLM response")
             self.cache.cache_response(cache_key, response)
 
         return response
@@ -171,19 +273,39 @@ class LLMService:
         """First LLM call: Identify core business entities from database schema."""
         from src.config import Config
 
+        self.logger.info("Starting entity identification generation")
+        self.logger.debug(f"Schema context contains {len(schema_context.get('tables', {}))} tables")
+        self.logger.debug(f"Business context length: {len(business_context)} characters")
+
         prompt_template = Config().get_prompt_templates()["entity_identification"]
+        self.logger.debug("Building entity identification prompt")
+
+        schema_json = json.dumps(schema_context, indent=2)
+        self.logger.debug(f"Schema JSON length: {len(schema_json)} characters")
+
         prompt = prompt_template.format(
-            schema_context=json.dumps(schema_context, indent=2),
+            schema_context=schema_json,
             business_context=business_context,
         )
 
-        self.logger.info("Generating entity identification")
+        prompt_length = len(prompt)
+        self.logger.info(f"Generated prompt with {prompt_length} characters")
+
+        if prompt_length > 100000:
+            self.logger.warning(f"Large prompt size: {prompt_length} characters - may hit token limits")
+
+        self.logger.info("Sending entity identification request to LLM")
         response = self._generate_with_cache(prompt)
 
+        self.logger.debug("Parsing LLM response as JSON")
         try:
-            return json.loads(response)
-        except json.JSONDecodeError:
-            self.logger.warning("Invalid JSON response, attempting repair")
+            parsed_response = json.loads(response)
+            entity_count = len(parsed_response.get('entities', []))
+            self.logger.info(f"Successfully parsed entity identification response with {entity_count} entities")
+            return parsed_response
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"Invalid JSON response: {e}")
+            self.logger.warning("Attempting JSON repair")
             return self.repair_json_response(response)
 
     def generate_entity_details(
@@ -195,51 +317,93 @@ class LLMService:
         """Second LLM call: Generate detailed entity definition."""
         from src.config import Config
 
+        self.logger.info(f"Starting entity details generation for: {entity_name}")
+
         # Extract relevant schema for this entity
         relevant_tables = entity_context.get("primary_tables", [])
+        self.logger.debug(f"Entity {entity_name} uses tables: {relevant_tables}")
+
         relevant_schema = {}
+        found_tables = []
+        missing_tables = []
+
         for table_name in relevant_tables:
             if table_name in schema_context.get("tables", {}):
                 relevant_schema[table_name] = schema_context["tables"][table_name]
+                found_tables.append(table_name)
+            else:
+                missing_tables.append(table_name)
+
+        if missing_tables:
+            self.logger.warning(f"Missing tables for entity {entity_name}: {missing_tables}")
+
+        self.logger.debug(f"Found schema for {len(found_tables)} tables: {found_tables}")
 
         prompt_template = Config().get_prompt_templates()["entity_details"]
+        self.logger.debug("Building entity details prompt")
+
+        relevant_schema_json = json.dumps(relevant_schema, indent=2)
+        sample_data_dict = {k: v.get("sample_data", []) for k, v in relevant_schema.items()}
+        sample_data_json = json.dumps(sample_data_dict, indent=2)
+
+        self.logger.debug(f"Relevant schema JSON length: {len(relevant_schema_json)} characters")
+        self.logger.debug(f"Sample data JSON length: {len(sample_data_json)} characters")
+
         prompt = prompt_template.format(
             entity_name=entity_name,
             entity_description=entity_context.get("description", ""),
             primary_tables=entity_context.get("primary_tables", []),
             business_function=entity_context.get("business_function", ""),
-            relevant_schema=json.dumps(relevant_schema, indent=2),
-            sample_data=json.dumps(
-                {k: v.get("sample_data", []) for k, v in relevant_schema.items()},
-                indent=2,
-            ),
+            relevant_schema=relevant_schema_json,
+            sample_data=sample_data_json,
         )
 
-        self.logger.info(f"Generating entity details for: {entity_name}")
+        prompt_length = len(prompt)
+        self.logger.info(f"Generated entity details prompt with {prompt_length} characters for {entity_name}")
+
+        self.logger.info(f"Sending entity details request to LLM for: {entity_name}")
         response = self._generate_with_cache(prompt)
 
+        self.logger.debug(f"Parsing entity details response for: {entity_name}")
         try:
-            return json.loads(response)
-        except json.JSONDecodeError:
-            self.logger.warning(
-                f"Invalid JSON response for {entity_name}, attempting repair"
-            )
+            parsed_response = json.loads(response)
+
+            # Log details about the generated entity
+            attrs_count = len(parsed_response.get('attributes', {}))
+            relations_count = len(parsed_response.get('relations', {}))
+            has_base_query = 'base_query' in parsed_response
+
+            self.logger.info(f"Successfully generated entity {entity_name}: {attrs_count} attributes, {relations_count} relations, base_query={has_base_query}")
+
+            return parsed_response
+        except json.JSONDecodeError as e:
+            self.logger.warning(f"Invalid JSON response for entity {entity_name}: {e}")
+            self.logger.warning("Attempting JSON repair")
             return self.repair_json_response(response)
 
     def repair_json_response(self, malformed_json: str) -> Dict[str, Any]:
         """Send malformed JSON back to LLM for automatic repair."""
         from src.config import Config
 
+        self.logger.warning("Starting JSON repair process")
+        self.logger.debug(f"Malformed JSON length: {len(malformed_json)} characters")
+        self.logger.debug(f"Malformed JSON preview: {malformed_json[:500]}...")
+
         prompt_template = Config().get_prompt_templates()["json_repair"]
         prompt = prompt_template.format(malformed_json=malformed_json)
 
-        self.logger.info("Attempting JSON repair")
+        self.logger.info("Sending JSON repair request to LLM")
         response = self._generate_with_cache(prompt)
 
+        self.logger.debug("Attempting to parse repaired JSON")
         try:
-            return json.loads(response)
+            repaired_response = json.loads(response)
+            self.logger.info("JSON repair successful")
+            return repaired_response
         except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to repair JSON: {e}")
+            self.logger.error(f"JSON repair failed: {e}")
+            self.logger.error(f"Repaired response preview: {response[:500]}...")
+            self.logger.error("Unable to parse LLM response as valid JSON after repair attempt")
             raise ValueError("Unable to parse LLM response as valid JSON")
 
     def validate_json_response(self, response: str) -> Dict[str, Any]:
