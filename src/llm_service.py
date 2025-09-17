@@ -298,15 +298,28 @@ class LLMService:
         response = self._generate_with_cache(prompt)
 
         self.logger.debug("Parsing LLM response as JSON")
-        try:
-            parsed_response = json.loads(response)
-            entity_count = len(parsed_response.get('entities', []))
-            self.logger.info(f"Successfully parsed entity identification response with {entity_count} entities")
-            return parsed_response
-        except json.JSONDecodeError as e:
-            self.logger.warning(f"Invalid JSON response: {e}")
-            self.logger.warning("Attempting JSON repair")
-            return self.repair_json_response(response)
+
+        # Check if response contains ```json format
+        if "```json" in response and "json" in response.lower():
+            self.logger.debug("Response appears to contain JSON in markdown format")
+            cleaned_response = self._extract_json_from_markdown(response)
+            try:
+                parsed_response = json.loads(cleaned_response)
+                entity_count = len(parsed_response.get('entities', []))
+                self.logger.info(f"Successfully parsed entity identification response with {entity_count} entities")
+                return parsed_response
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Failed to parse JSON after markdown extraction: {e}")
+                raise ValueError("Unable to parse LLM response as valid JSON")
+        else:
+            try:
+                parsed_response = json.loads(response)
+                entity_count = len(parsed_response.get('entities', []))
+                self.logger.info(f"Successfully parsed entity identification response with {entity_count} entities")
+                return parsed_response
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Invalid JSON response: {e}")
+                raise ValueError("Unable to parse LLM response as valid JSON")
 
     def generate_entity_details(
         self,
@@ -365,50 +378,54 @@ class LLMService:
         response = self._generate_with_cache(prompt)
 
         self.logger.debug(f"Parsing entity details response for: {entity_name}")
-        try:
-            parsed_response = json.loads(response)
 
-            # Log details about the generated entity
-            attrs_count = len(parsed_response.get('attributes', {}))
-            relations_count = len(parsed_response.get('relations', {}))
-            has_base_query = 'base_query' in parsed_response
+        # Check if response contains ```json format
+        if "```json" in response and "json" in response.lower():
+            self.logger.debug("Response appears to contain JSON in markdown format")
+            cleaned_response = self._extract_json_from_markdown(response)
+            try:
+                parsed_response = json.loads(cleaned_response)
 
-            self.logger.info(f"Successfully generated entity {entity_name}: {attrs_count} attributes, {relations_count} relations, base_query={has_base_query}")
+                # Log details about the generated entity
+                attrs_count = len(parsed_response.get('attributes', {}))
+                relations_count = len(parsed_response.get('relations', {}))
+                has_base_query = 'base_query' in parsed_response
 
-            return parsed_response
-        except json.JSONDecodeError as e:
-            self.logger.warning(f"Invalid JSON response for entity {entity_name}: {e}")
-            self.logger.warning("Attempting JSON repair")
-            return self.repair_json_response(response)
+                self.logger.info(f"Successfully generated entity {entity_name}: {attrs_count} attributes, {relations_count} relations, base_query={has_base_query}")
 
-    def repair_json_response(self, malformed_json: str) -> Dict[str, Any]:
-        """Send malformed JSON back to LLM for automatic repair."""
-        from src.config import Config
+                return parsed_response
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Failed to parse JSON after markdown extraction for entity {entity_name}: {e}")
+                raise ValueError("Unable to parse LLM response as valid JSON")
+        else:
+            try:
+                parsed_response = json.loads(response)
 
-        self.logger.warning("Starting JSON repair process")
-        self.logger.debug(f"Malformed JSON length: {len(malformed_json)} characters")
-        self.logger.debug(f"Malformed JSON preview: {malformed_json[:500]}...")
+                # Log details about the generated entity
+                attrs_count = len(parsed_response.get('attributes', {}))
+                relations_count = len(parsed_response.get('relations', {}))
+                has_base_query = 'base_query' in parsed_response
 
-        prompt_template = Config().get_prompt_templates()["json_repair"]
-        prompt = prompt_template.format(malformed_json=malformed_json)
+                self.logger.info(f"Successfully generated entity {entity_name}: {attrs_count} attributes, {relations_count} relations, base_query={has_base_query}")
 
-        self.logger.info("Sending JSON repair request to LLM")
-        response = self._generate_with_cache(prompt)
+                return parsed_response
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Invalid JSON response for entity {entity_name}: {e}")
+                raise ValueError("Unable to parse LLM response as valid JSON")
 
-        self.logger.debug("Attempting to parse repaired JSON")
-        try:
-            repaired_response = json.loads(response)
-            self.logger.info("JSON repair successful")
-            return repaired_response
-        except json.JSONDecodeError as e:
-            self.logger.error(f"JSON repair failed: {e}")
-            self.logger.error(f"Repaired response preview: {response[:500]}...")
-            self.logger.error("Unable to parse LLM response as valid JSON after repair attempt")
-            raise ValueError("Unable to parse LLM response as valid JSON")
 
-    def validate_json_response(self, response: str) -> Dict[str, Any]:
-        """Parse and validate JSON response from LLM."""
-        try:
-            return json.loads(response)
-        except json.JSONDecodeError:
-            return self.repair_json_response(response)
+
+    def _extract_json_from_markdown(self, response: str) -> str:
+        """Extract JSON content from markdown code blocks."""
+        import re
+
+        # Try to find JSON content within ```json ... ``` blocks
+        json_pattern = r'```(?:json)?\s*\n?(.*?)\n?```'
+        match = re.search(json_pattern, response, re.DOTALL | re.IGNORECASE)
+
+        if match:
+            self.logger.debug("Found JSON content within markdown code blocks")
+            return match.group(1).strip()
+
+        # If no markdown blocks found, return original response
+        return response
