@@ -10,7 +10,6 @@ __pycache__/
 *.pyo
 
 # Output files
-output/*.json
 logs/
 
 # IDE files

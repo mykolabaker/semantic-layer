@@ -1,0 +1,651 @@
+{
+  "generated_at": "2025-09-17T09:38:49.256956",
+  "database": "northwind.db",
+  "entities": {
+    "product_catalog": {
+      "description": "Represents the products offered by Northwind Traders, including their categorization and supplier information for product sourcing and supply chain management.",
+      "base_query": "SELECT p.ProductID, p.ProductName, p.QuantityPerUnit, p.UnitPrice, p.UnitsInStock, p.UnitsOnOrder, p.ReorderLevel, p.Discontinued, c.CategoryID, c.CategoryName, c.Description AS CategoryDescription, s.SupplierID, s.CompanyName AS SupplierName, s.ContactName AS SupplierContactName, s.ContactTitle AS SupplierContactTitle, s.Address AS SupplierAddress, s.City AS SupplierCity, s.Region AS SupplierRegion, s.PostalCode AS SupplierPostalCode, s.Country AS SupplierCountry, s.Phone AS SupplierPhone, s.Fax AS SupplierFax, s.HomePage AS SupplierHomePage FROM Products p LEFT JOIN Categories c ON p.CategoryID = c.CategoryID LEFT JOIN Suppliers s ON p.SupplierID = s.SupplierID",
+      "attributes": {
+        "product_id": {
+          "name": "Product ID",
+          "description": "Unique identifier for each product",
+          "sql": "p.ProductID"
+        },
+        "product_name": {
+          "name": "Product Name",
+          "description": "Name of the product",
+          "sql": "p.ProductName"
+        },
+        "quantity_per_unit": {
+          "name": "Quantity Per Unit",
+          "description": "Quantity of product per unit packaging",
+          "sql": "p.QuantityPerUnit"
+        },
+        "unit_price": {
+          "name": "Unit Price",
+          "description": "Price per unit of the product",
+          "sql": "p.UnitPrice"
+        },
+        "units_in_stock": {
+          "name": "Units In Stock",
+          "description": "Current number of units available in stock",
+          "sql": "p.UnitsInStock"
+        },
+        "units_on_order": {
+          "name": "Units On Order",
+          "description": "Number of units currently on order from suppliers",
+          "sql": "p.UnitsOnOrder"
+        },
+        "reorder_level": {
+          "name": "Reorder Level",
+          "description": "Stock level at which new orders should be placed",
+          "sql": "p.ReorderLevel"
+        },
+        "discontinued": {
+          "name": "Discontinued",
+          "description": "Indicates if the product is discontinued (0 = No, 1 = Yes)",
+          "sql": "p.Discontinued"
+        },
+        "category_id": {
+          "name": "Category ID",
+          "description": "Identifier for the product category",
+          "sql": "c.CategoryID"
+        },
+        "category_name": {
+          "name": "Category Name",
+          "description": "Name of the product category",
+          "sql": "c.CategoryName"
+        },
+        "category_description": {
+          "name": "Category Description",
+          "description": "Description of the product category",
+          "sql": "c.Description"
+        },
+        "supplier_id": {
+          "name": "Supplier ID",
+          "description": "Identifier for the product supplier",
+          "sql": "s.SupplierID"
+        },
+        "supplier_name": {
+          "name": "Supplier Name",
+          "description": "Company name of the supplier",
+          "sql": "s.CompanyName"
+        },
+        "supplier_contact_name": {
+          "name": "Supplier Contact Name",
+          "description": "Name of the supplier's contact person",
+          "sql": "s.ContactName"
+        },
+        "supplier_contact_title": {
+          "name": "Supplier Contact Title",
+          "description": "Title of the supplier's contact person",
+          "sql": "s.ContactTitle"
+        },
+        "supplier_address": {
+          "name": "Supplier Address",
+          "description": "Address of the supplier",
+          "sql": "s.Address"
+        },
+        "supplier_city": {
+          "name": "Supplier City",
+          "description": "City where the supplier is located",
+          "sql": "s.City"
+        },
+        "supplier_region": {
+          "name": "Supplier Region",
+          "description": "Region where the supplier is located",
+          "sql": "s.Region"
+        },
+        "supplier_postal_code": {
+          "name": "Supplier Postal Code",
+          "description": "Postal code of the supplier's location",
+          "sql": "s.PostalCode"
+        },
+        "supplier_country": {
+          "name": "Supplier Country",
+          "description": "Country of the supplier",
+          "sql": "s.Country"
+        },
+        "supplier_phone": {
+          "name": "Supplier Phone",
+          "description": "Phone number of the supplier",
+          "sql": "s.Phone"
+        },
+        "supplier_fax": {
+          "name": "Supplier Fax",
+          "description": "Fax number of the supplier",
+          "sql": "s.Fax"
+        },
+        "supplier_homepage": {
+          "name": "Supplier Home Page",
+          "description": "Website homepage of the supplier",
+          "sql": "s.HomePage"
+        },
+        "stock_status": {
+          "name": "Stock Status",
+          "description": "Indicates stock availability status",
+          "sql": "CASE WHEN p.UnitsInStock > 0 THEN 'In Stock' ELSE 'Out of Stock' END"
+        },
+        "needs_reorder": {
+          "name": "Needs Reorder",
+          "description": "Flag indicating if product stock is at or below reorder level and not discontinued",
+          "sql": "CASE WHEN p.UnitsInStock <= p.ReorderLevel AND p.Discontinued = '0' THEN 1 ELSE 0 END"
+        },
+        "total_stock_value": {
+          "name": "Total Stock Value",
+          "description": "Monetary value of current stock (UnitsInStock * UnitPrice)",
+          "sql": "COALESCE(p.UnitsInStock, 0) * COALESCE(p.UnitPrice, 0)"
+        },
+        "total_order_value": {
+          "name": "Total Order Value",
+          "description": "Monetary value of units currently on order (UnitsOnOrder * UnitPrice)",
+          "sql": "COALESCE(p.UnitsOnOrder, 0) * COALESCE(p.UnitPrice, 0)"
+        }
+      },
+      "relations": {
+        "category": {
+          "name": "Category",
+          "description": "Category to which the product belongs",
+          "target_entity": "categories",
+          "sql": "p.CategoryID = c.CategoryID"
+        },
+        "supplier": {
+          "name": "Supplier",
+          "description": "Supplier providing the product",
+          "target_entity": "suppliers",
+          "sql": "p.SupplierID = s.SupplierID"
+        }
+      }
+    },
+    "customer_management": {
+      "description": "Represents the customers of Northwind Traders along with their demographic classifications for sales and customer management purposes.",
+      "base_query": "SELECT c.CustomerID, c.CompanyName, c.ContactName, c.ContactTitle, c.Address, c.City, c.Region, c.PostalCode, c.Country, c.Phone, c.Fax, cd.CustomerTypeID, cd.CustomerDesc FROM Customers c LEFT JOIN CustomerCustomerDemo ccd ON c.CustomerID = ccd.CustomerID LEFT JOIN CustomerDemographics cd ON ccd.CustomerTypeID = cd.CustomerTypeID",
+      "attributes": {
+        "customer_id": {
+          "name": "Customer ID",
+          "description": "Unique identifier for the customer",
+          "sql": "c.CustomerID"
+        },
+        "company_name": {
+          "name": "Company Name",
+          "description": "Name of the customer's company",
+          "sql": "c.CompanyName"
+        },
+        "contact_name": {
+          "name": "Contact Name",
+          "description": "Name of the primary contact person",
+          "sql": "c.ContactName"
+        },
+        "contact_title": {
+          "name": "Contact Title",
+          "description": "Title of the primary contact person",
+          "sql": "c.ContactTitle"
+        },
+        "address": {
+          "name": "Address",
+          "description": "Street address of the customer",
+          "sql": "c.Address"
+        },
+        "city": {
+          "name": "City",
+          "description": "City where the customer is located",
+          "sql": "c.City"
+        },
+        "region": {
+          "name": "Region",
+          "description": "Geographical region of the customer",
+          "sql": "c.Region"
+        },
+        "postal_code": {
+          "name": "Postal Code",
+          "description": "Postal code of the customer's address",
+          "sql": "c.PostalCode"
+        },
+        "country": {
+          "name": "Country",
+          "description": "Country of the customer",
+          "sql": "c.Country"
+        },
+        "phone": {
+          "name": "Phone",
+          "description": "Primary phone number of the customer",
+          "sql": "c.Phone"
+        },
+        "fax": {
+          "name": "Fax",
+          "description": "Fax number of the customer",
+          "sql": "c.Fax"
+        },
+        "customer_type_id": {
+          "name": "Customer Type ID",
+          "description": "Identifier for the customer's demographic classification",
+          "sql": "cd.CustomerTypeID"
+        },
+        "customer_description": {
+          "name": "Customer Description",
+          "description": "Description of the customer's demographic classification",
+          "sql": "cd.CustomerDesc"
+        },
+        "has_demographics": {
+          "name": "Has Demographics",
+          "description": "Indicates if the customer has demographic classification",
+          "sql": "CASE WHEN cd.CustomerTypeID IS NOT NULL THEN 1 ELSE 0 END"
+        }
+      },
+      "relations": {
+        "customer_orders": {
+          "name": "Customer Orders",
+          "description": "Orders placed by the customer",
+          "target_entity": "orders",
+          "sql": "c.CustomerID = o.CustomerID"
+        },
+        "customer_demographics": {
+          "name": "Customer Demographics",
+          "description": "Demographic classifications associated with the customer",
+          "target_entity": "customer_demographics",
+          "sql": "cd.CustomerTypeID = ccd.CustomerTypeID"
+        }
+      }
+    },
+    "sales_orders": {
+      "description": "Represents customer orders with detailed order lines, sales representatives, and shipping information for sales and logistics management.",
+      "base_query": "SELECT o.OrderID, o.CustomerID, o.EmployeeID, o.OrderDate, o.RequiredDate, o.ShippedDate, o.ShipVia, o.Freight, o.ShipName, o.ShipAddress, o.ShipCity, o.ShipRegion, o.ShipPostalCode, o.ShipCountry, od.ProductID, od.UnitPrice, od.Quantity, od.Discount, e.LastName AS EmployeeLastName, e.FirstName AS EmployeeFirstName, e.Title AS EmployeeTitle, s.CompanyName AS ShipperName, s.Phone AS ShipperPhone FROM Orders o INNER JOIN [Order Details] od ON o.OrderID = od.OrderID LEFT JOIN Employees e ON o.EmployeeID = e.EmployeeID LEFT JOIN Shippers s ON o.ShipVia = s.ShipperID",
+      "attributes": {
+        "order_id": {
+          "name": "Order ID",
+          "description": "Unique identifier for each order",
+          "sql": "o.OrderID"
+        },
+        "customer_id": {
+          "name": "Customer ID",
+          "description": "Identifier of the customer who placed the order",
+          "sql": "o.CustomerID"
+        },
+        "employee_id": {
+          "name": "Sales Representative ID",
+          "description": "Identifier of the sales representative handling the order",
+          "sql": "o.EmployeeID"
+        },
+        "sales_rep_name": {
+          "name": "Sales Representative Name",
+          "description": "Full name of the sales representative",
+          "sql": "e.FirstName || ' ' || e.LastName"
+        },
+        "sales_rep_title": {
+          "name": "Sales Representative Title",
+          "description": "Job title of the sales representative",
+          "sql": "e.Title"
+        },
+        "order_date": {
+          "name": "Order Date",
+          "description": "Date when the order was placed",
+          "sql": "o.OrderDate"
+        },
+        "required_date": {
+          "name": "Required Date",
+          "description": "Date by which the order is required",
+          "sql": "o.RequiredDate"
+        },
+        "shipped_date": {
+          "name": "Shipped Date",
+          "description": "Date when the order was shipped",
+          "sql": "o.ShippedDate"
+        },
+        "shipper_id": {
+          "name": "Shipper ID",
+          "description": "Identifier of the shipping company",
+          "sql": "o.ShipVia"
+        },
+        "shipper_name": {
+          "name": "Shipper Company Name",
+          "description": "Name of the shipping company",
+          "sql": "s.CompanyName"
+        },
+        "shipper_phone": {
+          "name": "Shipper Phone",
+          "description": "Contact phone number of the shipping company",
+          "sql": "s.Phone"
+        },
+        "freight_cost": {
+          "name": "Freight Cost",
+          "description": "Cost of freight for the order",
+          "sql": "o.Freight"
+        },
+        "shipping_name": {
+          "name": "Shipping Name",
+          "description": "Name to which the order is shipped",
+          "sql": "o.ShipName"
+        },
+        "shipping_address": {
+          "name": "Shipping Address",
+          "description": "Street address for shipping",
+          "sql": "o.ShipAddress"
+        },
+        "shipping_city": {
+          "name": "Shipping City",
+          "description": "City for shipping",
+          "sql": "o.ShipCity"
+        },
+        "shipping_region": {
+          "name": "Shipping Region",
+          "description": "Region for shipping",
+          "sql": "o.ShipRegion"
+        },
+        "shipping_postal_code": {
+          "name": "Shipping Postal Code",
+          "description": "Postal code for shipping",
+          "sql": "o.ShipPostalCode"
+        },
+        "shipping_country": {
+          "name": "Shipping Country",
+          "description": "Country for shipping",
+          "sql": "o.ShipCountry"
+        },
+        "product_id": {
+          "name": "Product ID",
+          "description": "Identifier of the product in the order line",
+          "sql": "od.ProductID"
+        },
+        "unit_price": {
+          "name": "Unit Price",
+          "description": "Price per unit of the product",
+          "sql": "od.UnitPrice"
+        },
+        "quantity": {
+          "name": "Quantity",
+          "description": "Quantity of the product ordered",
+          "sql": "od.Quantity"
+        },
+        "discount": {
+          "name": "Discount",
+          "description": "Discount applied on the product line (fractional)",
+          "sql": "od.Discount"
+        },
+        "line_total": {
+          "name": "Line Total",
+          "description": "Total price for the order line after discount",
+          "sql": "od.UnitPrice * od.Quantity * (1 - od.Discount)"
+        },
+        "order_total": {
+          "name": "Order Total",
+          "description": "Total value of the order including all order lines and freight",
+          "sql": "(SELECT COALESCE(SUM(od2.UnitPrice * od2.Quantity * (1 - od2.Discount)), 0) FROM [Order Details] od2 WHERE od2.OrderID = o.OrderID) + COALESCE(o.Freight, 0)"
+        },
+        "days_to_ship": {
+          "name": "Days to Ship",
+          "description": "Number of days between order date and shipped date",
+          "sql": "CASE WHEN o.ShippedDate IS NOT NULL AND o.OrderDate IS NOT NULL THEN JULIANDAY(o.ShippedDate) - JULIANDAY(o.OrderDate) ELSE NULL END"
+        },
+        "is_late_shipment": {
+          "name": "Is Late Shipment",
+          "description": "Indicates if the order was shipped after the required date",
+          "sql": "CASE WHEN o.ShippedDate IS NOT NULL AND o.RequiredDate IS NOT NULL AND o.ShippedDate > o.RequiredDate THEN 1 ELSE 0 END"
+        }
+      },
+      "relations": {
+        "customer": {
+          "name": "Customer",
+          "description": "Customer who placed the order",
+          "target_entity": "customers",
+          "sql": "o.CustomerID = c.CustomerID"
+        },
+        "sales_representative": {
+          "name": "Sales Representative",
+          "description": "Employee responsible for the order",
+          "target_entity": "employees",
+          "sql": "o.EmployeeID = e.EmployeeID"
+        },
+        "shipper": {
+          "name": "Shipper",
+          "description": "Shipping company handling the order delivery",
+          "target_entity": "shippers",
+          "sql": "o.ShipVia = s.ShipperID"
+        },
+        "order_details": {
+          "name": "Order Details",
+          "description": "Detailed products and quantities in the order",
+          "target_entity": "order_details",
+          "sql": "o.OrderID = od.OrderID"
+        }
+      }
+    },
+    "sales_force": {
+      "description": "Represents the employees involved in sales activities and their assigned sales territories, including territory and region details.",
+      "base_query": "SELECT e.EmployeeID, e.LastName, e.FirstName, e.Title, e.TitleOfCourtesy, e.BirthDate, e.HireDate, e.Address, e.City, e.Region AS EmployeeRegion, e.PostalCode, e.Country, e.HomePhone, e.Extension, e.Notes, e.ReportsTo, e.PhotoPath, et.TerritoryID, t.TerritoryDescription, r.RegionID, r.RegionDescription FROM Employees e LEFT JOIN EmployeeTerritories et ON e.EmployeeID = et.EmployeeID LEFT JOIN Territories t ON et.TerritoryID = t.TerritoryID LEFT JOIN Regions r ON t.RegionID = r.RegionID",
+      "attributes": {
+        "employee_id": {
+          "name": "Employee ID",
+          "description": "Unique identifier for the employee",
+          "sql": "e.EmployeeID"
+        },
+        "full_name": {
+          "name": "Full Name",
+          "description": "Concatenation of employee's courtesy title, first name, and last name",
+          "sql": "TRIM(COALESCE(e.TitleOfCourtesy || ' ', '') || e.FirstName || ' ' || e.LastName)"
+        },
+        "title": {
+          "name": "Job Title",
+          "description": "Employee's job title",
+          "sql": "e.Title"
+        },
+        "birth_date": {
+          "name": "Birth Date",
+          "description": "Employee's date of birth",
+          "sql": "e.BirthDate"
+        },
+        "hire_date": {
+          "name": "Hire Date",
+          "description": "Date when the employee was hired",
+          "sql": "e.HireDate"
+        },
+        "address": {
+          "name": "Address",
+          "description": "Employee's street address",
+          "sql": "e.Address"
+        },
+        "city": {
+          "name": "City",
+          "description": "City where the employee is located",
+          "sql": "e.City"
+        },
+        "employee_region": {
+          "name": "Employee Region",
+          "description": "Region as recorded in employee's address",
+          "sql": "e.Region"
+        },
+        "postal_code": {
+          "name": "Postal Code",
+          "description": "Postal code of employee's address",
+          "sql": "e.PostalCode"
+        },
+        "country": {
+          "name": "Country",
+          "description": "Country of employee's address",
+          "sql": "e.Country"
+        },
+        "home_phone": {
+          "name": "Home Phone",
+          "description": "Employee's home phone number",
+          "sql": "e.HomePhone"
+        },
+        "extension": {
+          "name": "Phone Extension",
+          "description": "Employee's phone extension",
+          "sql": "e.Extension"
+        },
+        "notes": {
+          "name": "Notes",
+          "description": "Additional notes about the employee",
+          "sql": "e.Notes"
+        },
+        "reports_to": {
+          "name": "Reports To Employee ID",
+          "description": "Employee ID of the manager this employee reports to",
+          "sql": "e.ReportsTo"
+        },
+        "photo_path": {
+          "name": "Photo URL",
+          "description": "URL path to employee's photo",
+          "sql": "e.PhotoPath"
+        },
+        "territory_id": {
+          "name": "Territory ID",
+          "description": "Identifier of the sales territory assigned to the employee",
+          "sql": "et.TerritoryID"
+        },
+        "territory_description": {
+          "name": "Territory Description",
+          "description": "Description of the sales territory",
+          "sql": "t.TerritoryDescription"
+        },
+        "region_id": {
+          "name": "Region ID",
+          "description": "Identifier of the region associated with the territory",
+          "sql": "r.RegionID"
+        },
+        "region_description": {
+          "name": "Region Description",
+          "description": "Description of the region associated with the territory",
+          "sql": "r.RegionDescription"
+        },
+        "tenure_years": {
+          "name": "Tenure (Years)",
+          "description": "Number of full years the employee has been hired",
+          "sql": "CASE WHEN e.HireDate IS NOT NULL THEN CAST((julianday('now') - julianday(e.HireDate)) / 365.25 AS INTEGER) ELSE NULL END"
+        },
+        "territory_count": {
+          "name": "Number of Territories",
+          "description": "Count of distinct territories assigned to the employee",
+          "sql": "(SELECT COUNT(DISTINCT et2.TerritoryID) FROM EmployeeTerritories et2 WHERE et2.EmployeeID = e.EmployeeID)"
+        }
+      },
+      "relations": {
+        "manager": {
+          "name": "Manager",
+          "description": "Employee who is the manager of this employee",
+          "target_entity": "sales_force",
+          "sql": "e.ReportsTo = manager.EmployeeID"
+        },
+        "territories": {
+          "name": "Assigned Territories",
+          "description": "Sales territories assigned to the employee",
+          "target_entity": "territories",
+          "sql": "e.EmployeeID = et.EmployeeID"
+        }
+      }
+    },
+    "logistics_partners": {
+      "description": "Represents the shipping companies used by Northwind Traders to deliver orders internationally.",
+      "base_query": "SELECT s.ShipperID, s.CompanyName, s.Phone FROM Shippers s",
+      "attributes": {
+        "shipper_id": {
+          "name": "Shipper ID",
+          "description": "Unique identifier for each shipping company",
+          "sql": "s.ShipperID"
+        },
+        "company_name": {
+          "name": "Company Name",
+          "description": "Name of the shipping company",
+          "sql": "s.CompanyName"
+        },
+        "phone_number": {
+          "name": "Phone Number",
+          "description": "Contact phone number of the shipping company",
+          "sql": "s.Phone"
+        },
+        "total_orders_shipped": {
+          "name": "Total Orders Shipped",
+          "description": "Total number of orders shipped by this shipping company",
+          "sql": "(SELECT COUNT(*) FROM Orders o WHERE o.ShipVia = s.ShipperID)"
+        }
+      },
+      "relations": {
+        "orders": {
+          "name": "Orders",
+          "description": "Orders shipped by this logistics partner",
+          "target_entity": "orders",
+          "sql": "s.ShipperID = o.ShipVia"
+        }
+      }
+    },
+    "suppliers": {
+      "description": "Represents the companies that supply products to Northwind Traders, supporting product sourcing and supply chain management.",
+      "base_query": "SELECT s.SupplierID, s.CompanyName, s.ContactName, s.ContactTitle, s.Address, s.City, s.Region, s.PostalCode, s.Country, s.Phone, s.Fax, s.HomePage FROM Suppliers s",
+      "attributes": {
+        "supplier_id": {
+          "name": "Supplier ID",
+          "description": "Unique identifier for each supplier",
+          "sql": "s.SupplierID"
+        },
+        "company_name": {
+          "name": "Company Name",
+          "description": "Name of the supplier company",
+          "sql": "s.CompanyName"
+        },
+        "contact_name": {
+          "name": "Contact Name",
+          "description": "Name of the primary contact person at the supplier",
+          "sql": "s.ContactName"
+        },
+        "contact_title": {
+          "name": "Contact Title",
+          "description": "Job title of the contact person",
+          "sql": "s.ContactTitle"
+        },
+        "address": {
+          "name": "Address",
+          "description": "Street address of the supplier",
+          "sql": "s.Address"
+        },
+        "city": {
+          "name": "City",
+          "description": "City where the supplier is located",
+          "sql": "s.City"
+        },
+        "region": {
+          "name": "Region",
+          "description": "Region or state of the supplier",
+          "sql": "s.Region"
+        },
+        "postal_code": {
+          "name": "Postal Code",
+          "description": "Postal or ZIP code of the supplier",
+          "sql": "s.PostalCode"
+        },
+        "country": {
+          "name": "Country",
+          "description": "Country where the supplier is based",
+          "sql": "s.Country"
+        },
+        "phone": {
+          "name": "Phone Number",
+          "description": "Primary phone number of the supplier",
+          "sql": "s.Phone"
+        },
+        "fax": {
+          "name": "Fax Number",
+          "description": "Fax number of the supplier, if available",
+          "sql": "s.Fax"
+        },
+        "homepage": {
+          "name": "Homepage URL",
+          "description": "Website URL of the supplier",
+          "sql": "s.HomePage"
+        },
+        "contact_full": {
+          "name": "Full Contact Info",
+          "description": "Concatenated contact name and title for quick reference",
+          "sql": "TRIM(COALESCE(s.ContactName, '') || CASE WHEN s.ContactTitle IS NOT NULL AND s.ContactTitle <> '' THEN ' (' || s.ContactTitle || ')' ELSE '' END)"
+        }
+      },
+      "relations": {
+        "products": {
+          "name": "Products",
+          "description": "Products supplied by this supplier",
+          "target_entity": "products",
+          "sql": "s.SupplierID = p.SupplierID"
+        }
+      }
+    }
+  }
+}
